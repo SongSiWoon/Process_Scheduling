@@ -1,12 +1,3 @@
-from enum import Enum
-
-
-class ProcessSate(Enum):
-    Ready = 0
-    Running = 1
-    Termination = 3
-
-
 class ReadyQueue:
     # 생성자
     def __init__(self):
@@ -114,6 +105,7 @@ class Processor:
             self.power_waiting += 0.1
         return 0
 
+    # time-quantum 확인
     def check_time_quantum(self, readyQueue:ReadyQueue):
         if self.running:
             self.process.ctq -= 1
@@ -124,98 +116,99 @@ class Processor:
                 self.process = None
 
 
-class FCFS:
-
-    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+class Scheduling:
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq=0):
         self.process_lst = []
         self.processor_lst = []
-        self.pcore_index = p_core_lst
-        self.readyQueue = ReadyQueue()
-
+        self.readyQueue = None
         self.process_n = int(process_n)
         self.processor_n = int(processor_n)
+        self.pcore_index = p_core_lst
         self.bt_lst = bt_lst
         self.at_lst = at_lst
+        self.tq = tq
 
+        self.init_process()
+        self.init_processor()
+
+    def init_process(self):
         for i in range(self.process_n):
-            self.process_lst.append(Process(i + 1, at_lst[i], bt_lst[i]))
+            self.process_lst.append(Process(i + 1, self.at_lst[i], self.bt_lst[i], self.tq))
 
+    def init_processor(self):
         for i in range(self.processor_n):
-            if str(i + 1) in p_core_lst:
+            if str(i + 1) in self.pcore_index:
                 self.processor_lst.append(Processor(i + 1, "p"))
             else:
                 self.processor_lst.append(Processor(i + 1))
 
     def multi_processing(self):
         time = 0
-        exit = 0
+        termination = 0
 
-        while exit != self.process_n:
+        while termination != self.process_n:
             self.readyQueue.inReady(self.process_lst, time)
             time += 1
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
-                    exit += processor.Ecore_running(time)
+                    termination += processor.Ecore_running(time)
                 else:
-                    exit += processor.Pcore_running(time)
+                    termination += processor.Pcore_running(time)
 
+        process_info = self.output_process_info()
+        processor_info = self.output_processor_info()
 
-        process_m = []
+        return process_info, processor_info
+
+    def output_process_info(self):
+        process_info = []
         for process in self.process_lst:
-            process_m.append((process.id, process.at, process.bt, process.wt, process.tt, process.ntt))
+            process_info.append((process.id, process.at, process.bt, process.wt, process.tt, process.ntt))
 
-        processor_m = []
+        return process_info
+
+    def output_processor_info(self):
+        processor_info = []
+
         for processor in self.processor_lst:
-            processor_m.append(processor.core)
-            processor_m.append(processor.power_consum + processor.power_waiting)
-            processor_m.append(processor.memory)
+            power = processor.power_consum + processor.power_waiting
+            processor_info.append((processor.id, processor.core, power, processor.memory))
 
-        return (process_m, processor_m)
+        return processor_info
 
 
-class RR:
-    def __init__(self, process_n, processor_n,p_core_lst, at_lst, bt_lst, tq):
-        self.process_lst = []
-        self.processor_lst = []
-        self.pcore_index = p_core_lst
+class FCFS(Scheduling):
+
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+        super(FCFS, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst)
         self.readyQueue = ReadyQueue()
-        self.process_n = int(process_n)
-        self.processor_n = int(processor_n)
-        self.bt_lst = bt_lst
-        self.at_lst = at_lst
 
-        for i in range(self.process_n):
-            self.process_lst.append(Process(i + 1, at_lst[i], bt_lst[i], tq))
 
-        for i in range(self.processor_n):
-            if str(i + 1) in p_core_lst:
-                self.processor_lst.append(Processor(i + 1, "p"))
-            else:
-                self.processor_lst.append(Processor(i + 1))
+class RR(Scheduling):
+
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq):
+        super().__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
+        self.readyQueue = ReadyQueue()
 
     def multi_processing(self):
         time = 0
-        exit = 0
+        termination = 0
 
-        while exit != self.process_n:
+        while termination != self.process_n:
             self.readyQueue.inReady(self.process_lst, time)
+
             time += 1
             for processor in self.processor_lst:
                 processor.check_time_quantum(self.readyQueue)
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
-                    exit += processor.Ecore_running(time)
+                    termination += processor.Ecore_running(time)
                 else:
-                    exit += processor.Pcore_running(time)
+                    termination += processor.Pcore_running(time)
 
-        res = []
-        for process in self.process_lst:
-            res.append((process.id, process.at, process.bt, process.wt, process.tt, process.ntt))
-        processor_m = []
-        for processor in self.processor_lst:
-            processor_m.append(processor.core)
-            processor_m.append(processor.power_consum + processor.power_waiting)
-            processor_m.append(processor.memory)
+        process_info = self.output_process_info()
+        processor_info = self.output_processor_info()
 
-        return (res, processor_m)
+        return process_info, processor_info
+
