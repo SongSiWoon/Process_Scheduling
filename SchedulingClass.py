@@ -211,4 +211,3 @@ class RR(Scheduling):
         processor_info = self.output_processor_info()
 
         return process_info, processor_info
-
