@@ -28,11 +28,14 @@ class ReadyQueue:
     def size(self):
         return len(self.items)
 
+    # 프로세스 도착시 레디큐에 추가
     def inReady(self, process_lst, time):
         for process in process_lst:
             if process.at == time:
                 self.enqueue(process)
 
+    def __str__(self):
+        return "[" + (" ".join(str(s.id) for s in self.items)) + "]"
 
 class Process:
 
@@ -66,6 +69,8 @@ class Processor:
         self.process = None     # 할당된 프로세스
         self.core = core        # 프로세서 코어 종류
         self.running = False    # 프로세서 상태
+        self.power_consum = 0   # 소비 전력
+        self.power_waiting = 0  # 대기 전력
         self.memory = []        # 프로세스 기록
 
     # 프로세스 할당
@@ -75,12 +80,13 @@ class Processor:
                 self.process = readyQueue.dequeue()
                 self.running = True
 
-    # 프로세스 실행 -> 프로세스 cbt를 1 감소
-    def running_process(self, time):
+    # Ecore 프로세스 실행 -> 프로세스 cbt를 1 감소, 소비전력 1증가, 대기전력 0.1증가
+    def Ecore_running(self, time):
         if self.process is not None:
             self.memory.append(self.process.id)
             if self.running:
                 self.process.cbt -= 1
+                self.power_consum += 1
                 if self.process.cbt == 0:
                     self.running = False
                     self.process.update_processinfo(time)
@@ -88,7 +94,24 @@ class Processor:
                     return 1
         else:
             self.memory.append(None)
+            self.power_waiting += 0.1
+        return 0
 
+    # Pcore 프로세스 실행 -> 프로세스 cbr를 2감소, 소비 전력 3증가, 대기전력 0.1증가
+    def Pcore_running(self, time):
+        if self.process is not None:
+            self.memory.append(self.process.id)
+            if self.running:
+                self.process.cbt -= 2
+                self.power_consum += 3
+                if self.process.cbt <= 0:
+                    self.running = False
+                    self.process.update_processinfo(time)
+                    self.process = None
+                    return 1
+        else:
+            self.memory.append(None)
+            self.power_waiting += 0.1
         return 0
 
     def check_time_quantum(self, readyQueue:ReadyQueue):
@@ -103,9 +126,10 @@ class Processor:
 
 class FCFS:
 
-    def __init__(self, process_n, processor_n, at_lst, bt_lst):
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
         self.process_lst = []
         self.processor_lst = []
+        self.pcore_index = p_core_lst
         self.readyQueue = ReadyQueue()
 
         self.process_n = int(process_n)
@@ -115,8 +139,12 @@ class FCFS:
 
         for i in range(self.process_n):
             self.process_lst.append(Process(i + 1, at_lst[i], bt_lst[i]))
+
         for i in range(self.processor_n):
-            self.processor_lst.append(Processor(i + 1))
+            if str(i + 1) in p_core_lst:
+                self.processor_lst.append(Processor(i + 1, "p"))
+            else:
+                self.processor_lst.append(Processor(i + 1))
 
     def multi_processing(self):
         time = 0
@@ -127,22 +155,30 @@ class FCFS:
             time += 1
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
-                exit += processor.running_process(time)
+                if processor.core == "e":
+                    exit += processor.Ecore_running(time)
+                else:
+                    exit += processor.Pcore_running(time)
 
-        res = []
+
+        process_m = []
         for process in self.process_lst:
-            res.append((process.id, process.at, process.bt, process.wt, process.tt, process.ntt))
+            process_m.append((process.id, process.at, process.bt, process.wt, process.tt, process.ntt))
+
         processor_m = []
         for processor in self.processor_lst:
+            processor_m.append(processor.core)
+            processor_m.append(processor.power_consum + processor.power_waiting)
             processor_m.append(processor.memory)
 
-        return (res, processor_m)
+        return (process_m, processor_m)
 
 
 class RR:
-    def __init__(self, process_n, processor_n, at_lst, bt_lst, tq):
+    def __init__(self, process_n, processor_n,p_core_lst, at_lst, bt_lst, tq):
         self.process_lst = []
         self.processor_lst = []
+        self.pcore_index = p_core_lst
         self.readyQueue = ReadyQueue()
         self.process_n = int(process_n)
         self.processor_n = int(processor_n)
@@ -151,8 +187,12 @@ class RR:
 
         for i in range(self.process_n):
             self.process_lst.append(Process(i + 1, at_lst[i], bt_lst[i], tq))
+
         for i in range(self.processor_n):
-            self.processor_lst.append(Processor(i + 1))
+            if str(i + 1) in p_core_lst:
+                self.processor_lst.append(Processor(i + 1, "p"))
+            else:
+                self.processor_lst.append(Processor(i + 1))
 
     def multi_processing(self):
         time = 0
@@ -164,15 +204,18 @@ class RR:
             for processor in self.processor_lst:
                 processor.check_time_quantum(self.readyQueue)
                 processor.dispatch(self.readyQueue)
-                exit += processor.running_process(time)
-                if len(processor.memory) == 2:
-                    print('WTF')
+                if processor.core == "e":
+                    exit += processor.Ecore_running(time)
+                else:
+                    exit += processor.Pcore_running(time)
 
         res = []
         for process in self.process_lst:
             res.append((process.id, process.at, process.bt, process.wt, process.tt, process.ntt))
         processor_m = []
         for processor in self.processor_lst:
+            processor_m.append(processor.core)
+            processor_m.append(processor.power_consum + processor.power_waiting)
             processor_m.append(processor.memory)
 
         return (res, processor_m)
