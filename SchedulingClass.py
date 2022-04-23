@@ -20,7 +20,7 @@ class ReadyQueue:
         return len(self.items)
 
     # 프로세스 도착시 레디큐에 추가
-    def inReady(self, process_lst, time):
+    def inready(self, process_lst, time):
         for process in process_lst:
             if process.at == time:
                 self.enqueue(process)
@@ -28,17 +28,39 @@ class ReadyQueue:
     def __str__(self):
         return "[" + (" ".join(str(s.id) for s in self.items)) + "]"
 
+
+class SRTNReadyQueue(ReadyQueue):
+    def __init__(self):
+        super(SRTNReadyQueue, self).__init__()
+
+    def dequeue(self):
+        if not self.isEmpty():
+            priority = 0
+            for i in range(1, self.size()):
+                if self.items[i].cbt < self.items[priority].cbt:
+                    priority = i
+            return self.items.pop(priority)
+
+    def peek(self):
+        if not self.isEmpty():
+            priority = 0
+            for i in range(1, self.size()):
+                if self.items[i].cbt < self.items[priority].cbt:
+                    priority = i
+            return self.items[priority]
+
+
 class Process:
 
     def __init__(self, id, at, bt, tq=0):
-        self.id = int(id)   # 프로세스 아이디
-        self.bt = int(bt)   # 실행시간
+        self.id = int(id)  # 프로세스 아이디
+        self.bt = int(bt)  # 실행시간
         self.cbt = int(bt)  # 계산용 실행시간
-        self.at = int(at)   # 도칙 시간
-        self.wt = 0         # 대기 시간
-        self.tt = 0         # 반환 시간
-        self.ntt = 0        # 실행 시간 대비 대기 시간
-        self.tq = int(tq)   # Time quantum for RR
+        self.at = int(at)  # 도칙 시간
+        self.wt = 0  # 대기 시간
+        self.tt = 0  # 반환 시간
+        self.ntt = 0  # 실행 시간 대비 대기 시간
+        self.tq = int(tq)  # Time quantum for RR
         self.ctq = int(tq)  # 계산용 TQ
 
     # 프로세스 정보 업데이트
@@ -56,13 +78,13 @@ class Process:
 class Processor:
 
     def __init__(self, id, core="e"):
-        self.id = int(id)       # 프로세서 아이디
-        self.process = None     # 할당된 프로세스
-        self.core = core        # 프로세서 코어 종류
-        self.running = False    # 프로세서 상태
-        self.power_consum = 0   # 소비 전력
+        self.id = int(id)  # 프로세서 아이디
+        self.process = None  # 할당된 프로세스
+        self.core = core  # 프로세서 코어 종류
+        self.running = False  # 프로세서 상태
+        self.power_consum = 0  # 소비 전력
         self.power_waiting = 0  # 대기 전력
-        self.memory = []        # 프로세스 기록
+        self.memory = []  # 프로세스 기록
 
     # 프로세스 할당
     def dispatch(self, readyQueue: ReadyQueue):
@@ -106,7 +128,7 @@ class Processor:
         return 0
 
     # time-quantum 확인
-    def check_time_quantum(self, readyQueue:ReadyQueue):
+    def check_time_quantum(self, readyQueue: ReadyQueue):
         if self.running:
             self.process.ctq -= 1
             if self.process.ctq == 0:
@@ -147,7 +169,7 @@ class Scheduling:
         termination = 0
 
         while termination != self.process_n:
-            self.readyQueue.inReady(self.process_lst, time)
+            self.readyQueue.inready(self.process_lst, time)
             time += 1
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
@@ -188,7 +210,7 @@ class FCFS(Scheduling):
 class RR(Scheduling):
 
     def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq):
-        super().__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
+        super(RR, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
         self.readyQueue = ReadyQueue()
 
     def multi_processing(self):
@@ -196,7 +218,7 @@ class RR(Scheduling):
         termination = 0
 
         while termination != self.process_n:
-            self.readyQueue.inReady(self.process_lst, time)
+            self.readyQueue.inready(self.process_lst, time)
 
             time += 1
             for processor in self.processor_lst:
@@ -206,6 +228,37 @@ class RR(Scheduling):
                     termination += processor.Ecore_running(time)
                 else:
                     termination += processor.Pcore_running(time)
+
+        process_info = self.output_process_info()
+        processor_info = self.output_processor_info()
+
+        return process_info, processor_info
+
+
+class SRTN(Scheduling):
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+        super(SRTN, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst)
+        self.readyQueue = SRTNReadyQueue()
+
+    def multi_processing(self):
+        time = 0
+        termination = 0
+
+        while termination != self.process_n:
+            self.readyQueue.inready(self.process_lst, time)
+
+            time += 1
+            for processor in self.processor_lst:
+                processor.dispatch(self.readyQueue)
+                if processor.core == "e":
+                    termination += processor.Ecore_running(time)
+                else:
+                    termination += processor.Pcore_running(time)
+                if processor.running and not self.readyQueue.isEmpty():
+                    if processor.process.cbt > self.readyQueue.peek().cbt:
+                        processor.running = False
+                        self.readyQueue.enqueue(processor.process)
+                        processor.process = None
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()

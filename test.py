@@ -9,7 +9,8 @@ if __name__ == '__main__':
     burst_time_lst = list(map(int, input("Burst Time : ").split(" ")))
 
     #time_lst, p_lst = FCFS(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst).multi_processing()
-    time_lst, p_lst = RR(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst, 2).multi_processing()
+    #time_lst, p_lst = RR(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst, 2).multi_processing()
+    time_lst, p_lst = SRTN(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst).multi_processing()
 
     print(time_lst)
     print("-----------")
