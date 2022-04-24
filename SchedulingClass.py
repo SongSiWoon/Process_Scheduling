@@ -50,6 +50,16 @@ class SRTNReadyQueue(ReadyQueue):
             return self.items[priority]
 
 
+class HRRNReadyQueue(ReadyQueue):
+    def __init__(self):
+        super(HRRNReadyQueue, self).__init__()
+
+    def dequeue(self):
+        priority = self.items.index(max(self.items, key=lambda process: process.get_response_ratio()))
+        return self.items.pop(priority)
+
+
+
 class Process:
 
     def __init__(self, id, at, bt, tq=0):
@@ -68,6 +78,9 @@ class Process:
         self.tt = time - self.at
         self.ntt = round(self.tt / self.bt, 2)
         self.wt = self.tt - self.bt
+
+    def get_response_ratio(self):
+        return (self.wt + self.bt) / self.bt
 
     # 프로세스 정보 출력
     def __str__(self):
@@ -254,11 +267,38 @@ class SRTN(Scheduling):
                     termination += processor.Ecore_running(time)
                 else:
                     termination += processor.Pcore_running(time)
-                if processor.running and not self.readyQueue.isEmpty():
+                if processor.running and processor.process is not None and not self.readyQueue.isEmpty():
                     if processor.process.cbt > self.readyQueue.peek().cbt:
                         processor.running = False
                         self.readyQueue.enqueue(processor.process)
                         processor.process = None
+
+        process_info = self.output_process_info()
+        processor_info = self.output_processor_info()
+
+        return process_info, processor_info
+
+
+class HRRN(Scheduling):
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+        super(HRRN, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst)
+        self.readyQueue = HRRNReadyQueue()
+
+    def multi_processing(self):
+        time = 0
+        termination = 0
+
+        while termination != self.process_n:
+            self.readyQueue.inready(self.process_lst, time)
+            time += 1
+            for processor in self.processor_lst:
+                processor.dispatch(self.readyQueue)
+                if processor.core == "e":
+                    termination += processor.Ecore_running(time)
+                else:
+                    termination += processor.Pcore_running(time)
+            for process in self.readyQueue.items:
+                process.wt += 1
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
