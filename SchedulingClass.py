@@ -59,7 +59,6 @@ class HRRNReadyQueue(ReadyQueue):
         return self.items.pop(priority)
 
 
-
 class Process:
 
     def __init__(self, id, at, bt, tq=0):
@@ -156,6 +155,7 @@ class Scheduling:
         self.process_lst = []
         self.processor_lst = []
         self.readyQueue = None
+        self.queue_memory = []
         self.process_n = int(process_n)
         self.processor_n = int(processor_n)
         self.pcore_index = p_core_lst
@@ -183,6 +183,7 @@ class Scheduling:
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
+            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
             time += 1
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
@@ -193,8 +194,8 @@ class Scheduling:
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
-
-        return process_info, processor_info
+        queue_info = self.queue_memory
+        return process_info, processor_info, queue_info
 
     def output_process_info(self):
         process_info = []
@@ -211,6 +212,12 @@ class Scheduling:
             processor_info.append((processor.id, processor.core, power, processor.memory))
 
         return processor_info
+
+    def output_ReadyQueue_info(self, readyQueue):
+        res = []
+        for process in readyQueue.items:
+            res.append(process.id)
+        return res
 
 
 class FCFS(Scheduling):
@@ -232,7 +239,7 @@ class RR(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-
+            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
             time += 1
             for processor in self.processor_lst:
                 processor.check_time_quantum(self.readyQueue)
@@ -244,8 +251,8 @@ class RR(Scheduling):
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
-
-        return process_info, processor_info
+        queue_info = self.queue_memory
+        return process_info, processor_info, queue_info
 
 
 class SRTN(Scheduling):
@@ -259,7 +266,7 @@ class SRTN(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-
+            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
             time += 1
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
@@ -275,8 +282,8 @@ class SRTN(Scheduling):
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
-
-        return process_info, processor_info
+        queue_info = self.queue_memory
+        return process_info, processor_info, queue_info
 
 
 class HRRN(Scheduling):
@@ -290,6 +297,7 @@ class HRRN(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
+            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
             time += 1
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
@@ -302,5 +310,5 @@ class HRRN(Scheduling):
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
-
-        return process_info, processor_info
+        queue_info = self.queue_memory
+        return process_info, processor_info, queue_info
