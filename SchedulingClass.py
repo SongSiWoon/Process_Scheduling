@@ -29,6 +29,20 @@ class ReadyQueue:
         return "[" + (" ".join(str(s.id) for s in self.items)) + "]"
 
 
+class SRNReadyQueue(ReadyQueue):
+    def __init__(self):
+        super(SRNReadyQueue, self).__init__()
+
+    def dequeue(self):
+        if not self.isEmpty():
+            priority = 0
+            for i in range(1, self.size()):
+                if self.items[i].bt < self.items[priority].bt:
+                    priority = i
+            return self.items.pop(priority)
+
+
+
 class SRTNReadyQueue(ReadyQueue):
     def __init__(self):
         super(SRTNReadyQueue, self).__init__()
@@ -253,6 +267,12 @@ class RR(Scheduling):
         processor_info = self.output_processor_info()
         queue_info = self.queue_memory
         return process_info, processor_info, queue_info
+
+
+class SPN(Scheduling):
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+        super(SPN, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst)
+        self.readyQueue = SRNReadyQueue()
 
 
 class SRTN(Scheduling):
