@@ -15,6 +15,9 @@ class ReadyQueue:
     def dequeue(self):
         if not self.isEmpty(): return self.items.pop(0)
 
+    def peek(self):
+        if not self.isEmpty(): return self.items[0]
+
     # queue 사이즈
     def size(self):
         return len(self.items)
@@ -34,14 +37,18 @@ class SPNReadyQueue(ReadyQueue):
     def __init__(self):
         super(SPNReadyQueue, self).__init__()
 
-    # 실행시간이 적은 프로세스에게 우선순위르 부여하는 dequeue 재정의
-    def dequeue(self):
-        if not self.isEmpty():
-            priority = 0
-            for i in range(1, self.size()):
-                if self.items[i].bt < self.items[priority].bt:
-                    priority = i
-            return self.items.pop(priority)
+    def enqueue(self, item):
+        self.items.append(item)
+        self.items.sort(key=lambda process: process.bt)
+
+    # # 실행시간이 적은 프로세스에게 우선순위르 부여하는 dequeue 재정의
+    # def dequeue(self):
+    #     if not self.isEmpty():
+    #         priority = 0
+    #         for i in range(1, self.size()):
+    #             if self.items[i].bt < self.items[priority].bt:
+    #                 priority = i
+    #         return self.items.pop(priority)
 
 
 # SRTN전용 readyQueue
@@ -49,23 +56,27 @@ class SRTNReadyQueue(ReadyQueue):
     def __init__(self):
         super(SRTNReadyQueue, self).__init__()
 
-    # 잔여 실행시간이 적은 프로세스에게 우선순위를 부여하는 dequeue 재정의
-    def dequeue(self):
-        if not self.isEmpty():
-            priority = 0
-            for i in range(1, self.size()):
-                if self.items[i].cbt < self.items[priority].cbt:
-                    priority = i
-            return self.items.pop(priority)
+    def enqueue(self, item):
+        self.items.append(item)
+        self.items.sort(key=lambda process: process.cbt)
 
-    # 현재 running 상태는 프로세스 잔여시간과 ready 프로세스의 잔여시간 비교를 위한 peek 재정의
-    def peek(self):
-        if not self.isEmpty():
-            priority = 0
-            for i in range(1, self.size()):
-                if self.items[i].cbt < self.items[priority].cbt:
-                    priority = i
-            return self.items[priority]
+    # # 잔여 실행시간이 적은 프로세스에게 우선순위를 부여하는 dequeue 재정의
+    # def dequeue(self):
+    #     if not self.isEmpty():
+    #         priority = 0
+    #         for i in range(1, self.size()):
+    #             if self.items[i].cbt < self.items[priority].cbt:
+    #                 priority = i
+    #         return self.items.pop(priority)
+    #
+    # # 현재 running 상태는 프로세스 잔여시간과 ready 프로세스의 잔여시간 비교를 위한 peek 재정의
+    # def peek(self):
+    #     if not self.isEmpty():
+    #         priority = 0
+    #         for i in range(1, self.size()):
+    #             if self.items[i].cbt < self.items[priority].cbt:
+    #                 priority = i
+    #         return self.items[priority]
 
 
 # HRRN전용 readyQueue
@@ -73,23 +84,26 @@ class HRRNReadyQueue(ReadyQueue):
     def __init__(self):
         super(HRRNReadyQueue, self).__init__()
 
-    # Response ratio가 큰 프로세스한테 우선순위 부여하는 dequeue 재정의
-    def dequeue(self):
-        priority = self.items.index(max(self.items, key=lambda process: process.get_response_ratio()))
-        return self.items.pop(priority)
+    def enqueue(self, item):
+        self.items.append(item)
+        self.items.sort(key=lambda process: process.get_response_ratio(), reverse=True)
+
+    # def dequeue(self):
+    #     priority = self.items.index(max(self.items, key=lambda process: process.get_response_ratio()))
+    #     return self.items.pop(priority)
 
 
 class Process:
 
     def __init__(self, id, at, bt, tq=0):
-        self.id = int(id)   # 프로세스 아이디
-        self.bt = int(bt)   # 실행시간
+        self.id = int(id)  # 프로세스 아이디
+        self.bt = int(bt)  # 실행시간
         self.cbt = int(bt)  # 계산용 실행시간
-        self.at = int(at)   # 도칙 시간
-        self.wt = 0         # 대기 시간
-        self.tt = 0         # 반환 시간
-        self.ntt = 0        # 실행 시간 대비 대기 시간
-        self.tq = int(tq)   # Time quantum for RR
+        self.at = int(at)  # 도칙 시간
+        self.wt = 0  # 대기 시간
+        self.tt = 0  # 반환 시간
+        self.ntt = 0  # 실행 시간 대비 대기 시간
+        self.tq = int(tq)  # Time quantum for RR
         self.ctq = int(tq)  # 계산용 TQ
 
     # 프로세스 정보 업데이트
@@ -111,13 +125,13 @@ class Process:
 class Processor:
 
     def __init__(self, id, core="e"):
-        self.id = int(id)       # 프로세서 아이디
-        self.process = None     # 할당된 프로세스
-        self.core = core        # 프로세서 코어 종류
-        self.running = False    # 프로세서 상태
-        self.power_consum = 0   # 소비 전력
+        self.id = int(id)  # 프로세서 아이디
+        self.process = None  # 할당된 프로세스
+        self.core = core  # 프로세서 코어 종류
+        self.running = False  # 프로세서 상태
+        self.power_consum = 0  # 소비 전력
         self.power_waiting = 0  # 대기 전력
-        self.memory = []        # 프로세스 기록
+        self.memory = []  # 프로세스 기록
 
     # 프로세스 할당
     def dispatch(self, readyQueue: ReadyQueue):
@@ -135,7 +149,7 @@ class Processor:
                 self.power_consum += 1  # Ecore의 소비전력 계산
                 if self.process.cbt == 0:
                     self.running = False
-                    self.process.update_processinfo(time)      # 프로스세가 종료되면 tt, ntt, wt 업데이트
+                    self.process.update_processinfo(time)  # 프로스세가 종료되면 tt, ntt, wt 업데이트
                     self.process = None
                     return 1
         else:
@@ -148,11 +162,11 @@ class Processor:
         if self.process is not None:
             self.memory.append(self.process.id)
             if self.running:
-                self.process.cbt -= 2                       # Ecore대비 2배의 성능
-                self.power_consum += 3                      # Ecore대비 소비전력 3배 계산
+                self.process.cbt -= 2  # Ecore대비 2배의 성능
+                self.power_consum += 3  # Ecore대비 소비전력 3배 계산
                 if self.process.cbt <= 0:
                     self.running = False
-                    self.process.update_processinfo(time)   # 프로스세가 종료되면 tt, ntt, wt 업데이트
+                    self.process.update_processinfo(time)  # 프로스세가 종료되면 tt, ntt, wt 업데이트
                     self.process = None
                     return 1
         else:
@@ -163,8 +177,8 @@ class Processor:
     # time-quantum 확인
     def check_time_quantum(self, readyQueue: ReadyQueue):
         if self.running:
-            self.process.ctq -= 1       # 현재 실행중인 프로세스 time-quantum 감소
-            if self.process.ctq == 0:   # time-quantum이 0일때 다름 프로세스한테 선점당함
+            self.process.ctq -= 1  # 현재 실행중인 프로세스 time-quantum 감소
+            if self.process.ctq == 0:  # time-quantum이 0일때 다름 프로세스한테 선점당함
                 self.running = False
                 readyQueue.enqueue(self.process)
                 self.process.ctq = self.process.tq  # 다시 ctq time-quantum을 초기화
@@ -173,16 +187,16 @@ class Processor:
 
 class Scheduling:
     def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq=0):
-        self.process_lst = []                   # 입력된 프로세스 리스트
-        self.processor_lst = []                 # 입력된 프로세서 리스트
-        self.readyQueue = None                  # readyQueue
-        self.queue_memory = []                  # redyQueue에 저장되는 프로세스 기록하기위한 리스트
-        self.process_n = int(process_n)         # 프로세스의 수
-        self.processor_n = int(processor_n)     # 프로세서의 수
-        self.pcore_index = p_core_lst           # Pcore인 프로세서 id 리스트
-        self.bt_lst = bt_lst                    # 입력받은 실행시간 리스트
-        self.at_lst = at_lst                    # 입력받은 도착시간 리스트
-        self.tq = tq                            # 입력받은 time-quantum
+        self.process_lst = []  # 입력된 프로세스 리스트
+        self.processor_lst = []  # 입력된 프로세서 리스트
+        self.readyQueue = None  # readyQueue
+        self.queue_memory = []  # redyQueue에 저장되는 프로세스 기록하기위한 리스트
+        self.process_n = int(process_n)  # 프로세스의 수
+        self.processor_n = int(processor_n)  # 프로세서의 수
+        self.pcore_index = p_core_lst  # Pcore인 프로세서 id 리스트
+        self.bt_lst = bt_lst  # 입력받은 실행시간 리스트
+        self.at_lst = at_lst  # 입력받은 도착시간 리스트
+        self.tq = tq  # 입력받은 time-quantum
 
         self.init_process()
         self.init_processor()
@@ -202,8 +216,8 @@ class Scheduling:
 
     # 프로세스 멀티 프로세싱으로 실행
     def multi_processing(self):
-        time = 0            # 전체시간
-        termination = 0     # 종료된 프로세스의 수
+        time = 0  # 전체시간
+        termination = 0  # 종료된 프로세스의 수
 
         # 종료된 프로세스의 수와 입력된 프로세스의 수가 같을때 까지 실행
         while termination != self.process_n:
@@ -217,9 +231,9 @@ class Scheduling:
                 else:
                     termination += processor.Pcore_running(time)
 
-        process_info = self.output_process_info()       # 프로세스 정보들 반환
-        processor_info = self.output_processor_info()   # 프로세서 정보들 반환
-        queue_info = self.queue_memory                  # 레디큐 히스토리 반환
+        process_info = self.output_process_info()  # 프로세스 정보들 반환
+        processor_info = self.output_processor_info()  # 프로세서 정보들 반환
+        queue_info = self.queue_memory  # 레디큐 히스토리 반환
         return process_info, processor_info, queue_info
 
     # 프로세스의 id, at, bt, wt, tt, ntt 반환

@@ -12,19 +12,21 @@ if __name__ == '__main__':
     # 프로세스 순서대로 실행시간 입력
     burst_time_lst = list(map(int, input("Burst Time : ").split(" ")))
 
-    process_lst, processor_lst, queue_lst = FCFS(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst)\
-        .multi_processing()
+
+    #process_lst, processor_lst, queue_lst = FCFS(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst)\
+    #   .multi_processing()
     # process_lst, processor_lst, queue_lst = RR(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst, 2)\
     #     .multi_processing()
     # process_lst, processor_lst, queue_lst = SPN(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst)\
     #     .multi_processing()
     # process_lst, processor_lst, queue_lst = SRTN(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst)\
     #     .multi_processing()
-    # process_lst, processor_lst, queue_lst = HRRN(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst)\
-    #     .multi_processing()
+    process_lst, processor_lst, queue_lst = HRRN(processes, processors, pcore_idx, arrival_time_lst, burst_time_lst)\
+        .multi_processing()
 
     print(process_lst)          # 프로세스정보 출력
     print("-----------")
     print(processor_lst)        # 프로세서정보 출력
     print("-----------")
     print(queue_lst)            # 레디큐 정보 출력
+
