@@ -141,9 +141,10 @@ class Processor:
                 self.running = True
 
     # Ecore 프로세스 실행 -> 프로세스 cbt를 1 감소, 소비전력 1증가, 대기전력 0.1증가
-    def Ecore_running(self, time):
+    def Ecore_running(self, time, gui):
         if self.process is not None:
             self.memory.append(self.process.id)
+            gui.setGTable(self.process.id, time)
             if self.running:
                 self.process.cbt -= 1
                 self.power_consum += 1  # Ecore의 소비전력 계산
@@ -158,9 +159,10 @@ class Processor:
         return 0
 
     # Pcore 프로세스 실행 -> 프로세스 cbr를 2감소, 소비 전력 3증가, 대기전력 0.1증가
-    def Pcore_running(self, time):
+    def Pcore_running(self, time, gui):
         if self.process is not None:
             self.memory.append(self.process.id)
+            gui.setGTable(self.process.id, time)
             if self.running:
                 self.process.cbt -= 2  # Ecore대비 2배의 성능
                 self.power_consum += 3  # Ecore대비 소비전력 3배 계산
@@ -186,7 +188,8 @@ class Processor:
 
 
 class Scheduling:
-    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq=0):
+    def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq=0):
+        self.gui = gui
         self.process_lst = []  # 입력된 프로세스 리스트
         self.processor_lst = []  # 입력된 프로세서 리스트
         self.readyQueue = None  # readyQueue
