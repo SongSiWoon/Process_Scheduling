@@ -141,10 +141,9 @@ class Processor:
                 self.running = True
 
     # Ecore 프로세스 실행 -> 프로세스 cbt를 1 감소, 소비전력 1증가, 대기전력 0.1증가
-    def Ecore_running(self, time, gui):
+    def Ecore_running(self, time):
         if self.process is not None:
             self.memory.append(self.process.id)
-            gui.setGTable(self.process.id, time)
             if self.running:
                 self.process.cbt -= 1
                 self.power_consum += 1  # Ecore의 소비전력 계산
@@ -159,10 +158,9 @@ class Processor:
         return 0
 
     # Pcore 프로세스 실행 -> 프로세스 cbr를 2감소, 소비 전력 3증가, 대기전력 0.1증가
-    def Pcore_running(self, time, gui):
+    def Pcore_running(self, time):
         if self.process is not None:
             self.memory.append(self.process.id)
-            gui.setGTable(self.process.id, time)
             if self.running:
                 self.process.cbt -= 2  # Ecore대비 2배의 성능
                 self.power_consum += 3  # Ecore대비 소비전력 3배 계산
@@ -188,8 +186,7 @@ class Processor:
 
 
 class Scheduling:
-    def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq=0):
-        self.gui = gui
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq=0):
         self.process_lst = []  # 입력된 프로세스 리스트
         self.processor_lst = []  # 입력된 프로세서 리스트
         self.readyQueue = None  # readyQueue
@@ -230,9 +227,9 @@ class Scheduling:
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)  # 현재 비어있는 프로세서에 프로세스 할당
                 if processor.core == "e":
-                    termination += processor.Ecore_running(time, self.gui)
+                    termination += processor.Ecore_running(time)
                 else:
-                    termination += processor.Pcore_running(time, self.gui)
+                    termination += processor.Pcore_running(time)
 
         process_info = self.output_process_info()  # 프로세스 정보들 반환
         processor_info = self.output_processor_info()  # 프로세서 정보들 반환
@@ -267,15 +264,15 @@ class Scheduling:
 
 class FCFS(Scheduling):
 
-    def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst):
-        super(FCFS, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst)
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+        super(FCFS, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst)
         self.readyQueue = ReadyQueue()
 
 
 class RR(Scheduling):
 
-    def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq):
-        super(RR, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq):
+        super(RR, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
         self.readyQueue = ReadyQueue()
 
     def multi_processing(self):
@@ -290,9 +287,9 @@ class RR(Scheduling):
                 processor.check_time_quantum(self.readyQueue)  # RR은 time-quantum확인하는 로직 추가
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
-                    termination += processor.Ecore_running(time, self.gui)
+                    termination += processor.Ecore_running(time)
                 else:
-                    termination += processor.Pcore_running(time, self.gui)
+                    termination += processor.Pcore_running(time)
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
@@ -301,14 +298,14 @@ class RR(Scheduling):
 
 
 class SPN(Scheduling):
-    def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst):
-        super(SPN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst)
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+        super(SPN, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst)
         self.readyQueue = SPNReadyQueue()  # SRN전용 Queue사용
 
 
 class SRTN(Scheduling):
-    def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst):
-        super(SRTN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst)
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+        super(SRTN, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst)
         self.readyQueue = SRTNReadyQueue()  # SRTN전용 Queue사용
 
     def multi_processing(self):
@@ -322,9 +319,9 @@ class SRTN(Scheduling):
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
-                    termination += processor.Ecore_running(time, self.gui)
+                    termination += processor.Ecore_running(time)
                 else:
-                    termination += processor.Pcore_running(time, self.gui)
+                    termination += processor.Pcore_running(time)
 
                 if processor.running and processor.process is not None and not self.readyQueue.isEmpty():
                     # 현재 실행중인 프로세스의 남은 실행시간과 readyQueue에서 남은 실행시간이 가장 적은 값과 비교
@@ -340,8 +337,8 @@ class SRTN(Scheduling):
 
 
 class HRRN(Scheduling):
-    def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst):
-        super(HRRN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst)
+    def __init__(self, process_n, processor_n, p_core_lst, at_lst, bt_lst):
+        super(HRRN, self).__init__(process_n, processor_n, p_core_lst, at_lst, bt_lst)
         self.readyQueue = HRRNReadyQueue()  # HRRN전용 Queue 사용
 
     def multi_processing(self):
@@ -355,9 +352,9 @@ class HRRN(Scheduling):
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
-                    termination += processor.Ecore_running(time, self.gui)
+                    termination += processor.Ecore_running(time)
                 else:
-                    termination += processor.Pcore_running(time, self.gui)
+                    termination += processor.Pcore_running(time)
             # response_ratio계산을 위해 readyQueue에 있는 프로세스들의 wt 업데이트
             for process in self.readyQueue.items:
                 process.wt += 1
