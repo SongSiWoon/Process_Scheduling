@@ -366,3 +366,33 @@ class HRRN(Scheduling):
         processor_info = self.output_processor_info()
         queue_info = self.queue_memory
         return process_info, processor_info, queue_info
+
+
+class P_HRRN(Scheduling):
+    def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq):
+        super(P_HRRN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
+        self.readyQueue = HRRNReadyQueue()  # HRRN전용 Queue 사용
+
+    def multi_processing(self):
+        time = 0
+        termination = 0
+
+        while termination != self.process_n:
+            self.readyQueue.inready(self.process_lst, time)
+            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
+            time += 1
+            for processor in self.processor_lst:
+                processor.check_time_quantum(self.readyQueue)  # time-quantum확인하는 로직 추가
+                processor.dispatch(self.readyQueue)
+                if processor.core == "e":
+                    termination += processor.Ecore_running(time)
+                else:
+                    termination += processor.Pcore_running(time)
+            # response_ratio계산을 위해 readyQueue에 있는 프로세스들의 wt 업데이트
+            for process in self.readyQueue.items:
+                process.wt += 1
+
+        process_info = self.output_process_info()
+        processor_info = self.output_processor_info()
+        queue_info = self.queue_memory
+        return process_info, processor_info, queue_info
