@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+
 class ReadyQueue:
     # 생성자
     def __init__(self):
@@ -84,13 +87,13 @@ class HRRNReadyQueue(ReadyQueue):
     def __init__(self):
         super(HRRNReadyQueue, self).__init__()
 
-    def enqueue(self, item):
-        self.items.append(item)
-        self.items.sort(key=lambda process: process.get_response_ratio(), reverse=True)
+    # def enqueue(self, item):
+    #     self.items.append(item)
+    #     self.items.sort(key=lambda process: process.get_response_ratio(), reverse=True)
 
-    # def dequeue(self):
-    #     priority = self.items.index(max(self.items, key=lambda process: process.get_response_ratio()))
-    #     return self.items.pop(priority)
+    def dequeue(self):
+        priority = self.items.index(max(self.items, key=lambda process: process.get_response_ratio()))
+        return self.items.pop(priority)
 
 
 class Process:
@@ -131,6 +134,7 @@ class Processor:
         self.running = False  # 프로세서 상태
         self.power_consum = 0  # 소비 전력
         self.power_waiting = 0  # 대기 전력
+        self.power = 0
         self.memory = []  # 프로세스 기록
 
     # 프로세스 할당
@@ -147,6 +151,7 @@ class Processor:
             if self.running:
                 self.process.cbt -= 1
                 self.power_consum += 1  # Ecore의 소비전력 계산
+                self.power += 1
                 if self.process.cbt == 0:
                     self.running = False
                     self.process.update_processinfo(time)  # 프로스세가 종료되면 tt, ntt, wt 업데이트
@@ -154,7 +159,9 @@ class Processor:
                     return 1
         else:
             self.memory.append(None)
-            self.power_waiting += 0.1  # Ecore의 대기전력 계산
+            self.power_waiting += float(Decimal('0.1'))  # Ecore의 대기전력 계산
+            self.power += float(Decimal('0.1'))
+
         return 0
 
     # Pcore 프로세스 실행 -> 프로세스 cbr를 2감소, 소비 전력 3증가, 대기전력 0.1증가
@@ -164,6 +171,7 @@ class Processor:
             if self.running:
                 self.process.cbt -= 2  # Ecore대비 2배의 성능
                 self.power_consum += 3  # Ecore대비 소비전력 3배 계산
+                self.power += 3
                 if self.process.cbt <= 0:
                     self.running = False
                     self.process.update_processinfo(time)  # 프로스세가 종료되면 tt, ntt, wt 업데이트
@@ -171,7 +179,9 @@ class Processor:
                     return 1
         else:
             self.memory.append(None)
-            self.power_waiting += 0.1
+            self.power_waiting += float(Decimal('0.1'))
+            self.power += float(Decimal('0.1'))
+
         return 0
 
     # time-quantum 확인
@@ -197,6 +207,7 @@ class Scheduling:
         self.bt_lst = bt_lst  # 입력받은 실행시간 리스트
         self.at_lst = at_lst  # 입력받은 도착시간 리스트
         self.tq = tq  # 입력받은 time-quantum
+        self.power = 0
 
         self.init_process()
         self.init_processor()
@@ -224,12 +235,15 @@ class Scheduling:
             self.readyQueue.inready(self.process_lst, time)  # 새롭게 들어오는 프로세스 readyqueue에 추가
             self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
             time += 1
+            total_power = 0
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)  # 현재 비어있는 프로세서에 프로세스 할당
                 if processor.core == "e":
                     termination += processor.Ecore_running(time)
                 else:
                     termination += processor.Pcore_running(time)
+                print(processor.id, processor.power)
+                total_power += processor.power
 
         process_info = self.output_process_info()  # 프로세스 정보들 반환
         processor_info = self.output_processor_info()  # 프로세서 정보들 반환
@@ -250,8 +264,10 @@ class Scheduling:
 
         for processor in self.processor_lst:
             power = processor.power_consum + processor.power_waiting
+            self.power += processor.power
             processor_info.append((processor.id, processor.core, power, processor.memory))
 
+        processor_info.append(self.power)
         return processor_info
 
     # readyqueue에 들어왔던 프로세스 id 반환

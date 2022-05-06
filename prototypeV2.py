@@ -12,9 +12,11 @@ from ctypes import alignment
 from msilib.schema import tables
 from PyQt5 import QtCore, QtGui, QtWidgets
 import PyQt5
+from PyQt5.QtTest import *
 
 import random
 from os import environ
+from InputScheduling import start_scheduling
 
 
 class Ui_MainWindow(object):
@@ -31,8 +33,8 @@ class Ui_MainWindow(object):
 
         self.pCount = 15
         self.cCount = 4
-        #self.cColor = ["rgb(21, 139, 230)","rgb(91, 172, 234)","rgb(40, 75, 102)","rgb(16, 108, 179)"]
-        self.cColor = [(139, 71, 252),(77, 85, 230),(71, 155, 252),(68, 221, 242)]
+        # self.cColor = ["rgb(21, 139, 230)","rgb(91, 172, 234)","rgb(40, 75, 102)","rgb(16, 108, 179)"]
+        self.cColor = [(139, 71, 252), (77, 85, 230), (71, 155, 252), (68, 221, 242)]
 
         self.I_groupBox = QtWidgets.QGroupBox(self.centralwidget)
         self.I_groupBox.setGeometry(QtCore.QRect(20, 10, 521, 421))
@@ -66,7 +68,7 @@ class Ui_MainWindow(object):
         self.I_C_GroupBox.setAlignment(QtCore.Qt.AlignCenter)
         self.I_C_GroupBox.setObjectName("CoreBox")
         self.I_C_GroupBox.raise_()
-        
+
         self.I_C_Layout = QtWidgets.QWidget(self.I_C_GroupBox)
         self.I_C_Layout.setGeometry(QtCore.QRect(10, 20, 171, 151))
         self.I_C_Layout.setObjectName("I_C_Layout")
@@ -81,26 +83,26 @@ class Ui_MainWindow(object):
         for i in range(4):
             groupBox = QtWidgets.QGroupBox(self.I_C_Layout)
             groupBox.setEnabled(True)
-            groupBox.setObjectName("I_C_groupBox"+str(i))
+            groupBox.setObjectName("I_C_groupBox" + str(i))
             self.I_C_C_GroupBox.append(groupBox)
-            
+
             PButton = QtWidgets.QRadioButton(groupBox)
             PButton.setGeometry(QtCore.QRect(10, 20, 71, 16))
             PButton.setChecked(True)
-            PButton.setObjectName("I_C_PButton"+str(i))
+            PButton.setObjectName("I_C_PButton" + str(i))
             self.I_C_PButton.append(PButton)
 
             EButton = QtWidgets.QRadioButton(groupBox)
             EButton.setGeometry(QtCore.QRect(10, 40, 71, 16))
             EButton.setChecked(False)
-            EButton.setObjectName("I_C_EButton"+str(i))
+            EButton.setObjectName("I_C_EButton" + str(i))
             self.I_C_EButton.append(EButton)
 
-            #groupBox.toggled['bool'].connect(PButton.setEnabled)
-            #groupBox.toggled['bool'].connect(EButton.setEnabled)
+            # groupBox.toggled['bool'].connect(PButton.setEnabled)
+            # groupBox.toggled['bool'].connect(EButton.setEnabled)
 
-            #self.I_C_Grid.setContentsMargins(0, 0, 0, 0)
-            self.I_C_Grid.addWidget(groupBox, int(i/2), int(i%2), 1, 1)
+            # self.I_C_Grid.setContentsMargins(0, 0, 0, 0)
+            self.I_C_Grid.addWidget(groupBox, int(i / 2), int(i % 2), 1, 1)
 
         self.I_ScheduleComboBox = QtWidgets.QComboBox(self.I_groupBox)
         self.I_ScheduleComboBox.setGeometry(QtCore.QRect(310, 270, 201, 21))
@@ -119,8 +121,8 @@ class Ui_MainWindow(object):
         self.I_RRTimeGroupBox.setEnabled(False)
         self.I_RRTimeGroupBox.setGeometry(QtCore.QRect(310, 300, 201, 41))
         self.I_RRTimeGroupBox.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
-        #self.I_RRTimeGroupBox.setStyleSheet("")
-        #self.I_RRTimeGroupBox.setTitle("")
+        # self.I_RRTimeGroupBox.setStyleSheet("")
+        # self.I_RRTimeGroupBox.setTitle("")
         self.I_RRTimeGroupBox.setObjectName("I_RRTimeGroupBox")
         self.I_RRTimeGroupBox.raise_()
 
@@ -149,15 +151,15 @@ class Ui_MainWindow(object):
 
         self.Consume_SpinBox = []
         for i in range(4):
-            spinBox = QtWidgets.QSpinBox(self.Consume_Group)
-            spinBox.setGeometry(QtCore.QRect(10+60*int(i%2), 20+39*int(i/2), 51, 21))
+            spinBox = QtWidgets.QDoubleSpinBox(self.Consume_Group)
+            spinBox.setGeometry(QtCore.QRect(10 + 60 * int(i % 2), 20 + 39 * int(i / 2), 51, 21))
             spinBox.setFrame(True)
-            spinBox.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+            spinBox.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
             spinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
-            spinBox.setObjectName("Consume_spinBox"+str(i))
+            spinBox.setObjectName("Consume_spinBox" + str(i))
             spinBox.setReadOnly(True)
             spinBox.setSuffix(' W')
-            spinBox.setStyleSheet("border: 1px solid rgb"+str(self.cColor[i]))
+            spinBox.setStyleSheet("border: 1px solid rgb" + str(self.cColor[i]))
             self.Consume_SpinBox.append(spinBox)
 
         self.RQ_GroupBox = QtWidgets.QGroupBox(self.centralwidget)
@@ -178,10 +180,10 @@ class Ui_MainWindow(object):
             label = QtWidgets.QLabel(self.RQ_HLWidget)
             label.setFixedSize(QtCore.QSize(14, 59))
             label.setStyleSheet("background-color: rgb(255, 255, 255);")
-            label.setObjectName("pQueueElement"+str(i+1))
+            label.setObjectName("pQueueElement" + str(i + 1))
             label.setAlignment(QtCore.Qt.AlignCenter)
             self.RQ_HLayout.addWidget(label)
-            #label.setText(QtCore.QCoreApplication.translate("MainWindow", "P"+str(i+1)))
+            # label.setText(QtCore.QCoreApplication.translate("MainWindow", "P"+str(i+1)))
 
         self.I_P_GroupBox = QtWidgets.QGroupBox(self.I_groupBox)
         self.I_P_GroupBox.setGeometry(QtCore.QRect(10, 80, 291, 331))
@@ -207,12 +209,12 @@ class Ui_MainWindow(object):
         self.I_P_PLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.I_P_PLabel.setObjectName("I_P_PLabel")
         self.gridLayout.addWidget(self.I_P_PLabel, 0, 0, 1, 1)
-       
+
         self.I_P_ATLabel = QtWidgets.QLabel(self.gridLayoutWidget)
         self.I_P_ATLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.I_P_ATLabel.setObjectName("I_P_ATLabel")
         self.gridLayout.addWidget(self.I_P_ATLabel, 0, 1, 1, 1)
-        
+
         self.I_P_BTLabel = QtWidgets.QLabel(self.gridLayoutWidget)
         self.I_P_BTLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.I_P_BTLabel.setObjectName("I_P_BTLabel")
@@ -250,10 +252,10 @@ class Ui_MainWindow(object):
                 self.G_TableWidget.setItem(r, c, item)
 
         self.G_TableWidget.horizontalHeader().setCascadingSectionResizes(False)
-        #self.G_TableWidget.horizontalHeader().setMinimumSectionSize(3)
+        # self.G_TableWidget.horizontalHeader().setMinimumSectionSize(3)
         self.G_TableWidget.horizontalHeader().setMaximumSectionSize(23)
         self.G_TableWidget.horizontalHeader().setDefaultSectionSize(23)
-        #self.G_TableWidget.verticalHeader().setMinimumSectionSize(3)
+        # self.G_TableWidget.verticalHeader().setMinimumSectionSize(3)
         self.G_TableWidget.verticalHeader().setMaximumSectionSize(20)
         self.G_TableWidget.verticalHeader().setDefaultSectionSize(20)
 
@@ -278,7 +280,7 @@ class Ui_MainWindow(object):
         for i in range(5):
             item = QtWidgets.QTableWidgetItem()
             self.R_TableWidget.setHorizontalHeaderItem(i, item)
-        
+
         for r in range(self.R_TableWidget.rowCount()):
             for c in range(self.R_TableWidget.columnCount()):
                 item = QtWidgets.QTableWidgetItem()
@@ -292,11 +294,11 @@ class Ui_MainWindow(object):
         self.R_TableWidget.verticalHeader().setDefaultSectionSize(18)
         self.R_TableWidget.verticalHeader().setFixedWidth(29)
 
-        self.powerConsumeSpinBox = QtWidgets.QSpinBox(self.G_GroupBox)
+        self.powerConsumeSpinBox = QtWidgets.QDoubleSpinBox(self.G_GroupBox)
         self.powerConsumeSpinBox.setGeometry(QtCore.QRect(730, 20, 81, 22))
         self.powerConsumeSpinBox.setFrame(True)
         self.powerConsumeSpinBox.setReadOnly(True)
-        self.powerConsumeSpinBox.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.powerConsumeSpinBox.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.powerConsumeSpinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
         self.powerConsumeSpinBox.setMaximum(10000)
         self.powerConsumeSpinBox.setObjectName("powerConsumeSpinBox")
@@ -305,7 +307,7 @@ class Ui_MainWindow(object):
         self.nowTimeSpinBox.setGeometry(QtCore.QRect(880, 20, 81, 22))
         self.nowTimeSpinBox.setFrame(True)
         self.nowTimeSpinBox.setReadOnly(True)
-        self.nowTimeSpinBox.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.nowTimeSpinBox.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.nowTimeSpinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
         self.nowTimeSpinBox.setMaximum(10000)
         self.nowTimeSpinBox.setObjectName("nowTimeSpinBox")
@@ -321,24 +323,24 @@ class Ui_MainWindow(object):
         for i in range(15):
             label = QtWidgets.QLabel(self.gridLayoutWidget)
             label.setAlignment(QtCore.Qt.AlignCenter)
-            label.setObjectName("I_P_Label"+str(i+1))
-            self.gridLayout.addWidget(label, i+1, 0, 1, 1)
+            label.setObjectName("I_P_Label" + str(i + 1))
+            self.gridLayout.addWidget(label, i + 1, 0, 1, 1)
             self.I_P_Label.append(label)
 
             processAT = QtWidgets.QSpinBox(self.gridLayoutWidget)
-            #processAT.setEnabled(False)
+            # processAT.setEnabled(False)
             processAT.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
-            processAT.setObjectName("processAT"+str(i+1))
+            processAT.setObjectName("processAT" + str(i + 1))
             processAT.setFixedHeight(17)
-            self.gridLayout.addWidget(processAT, i+1, 1, 1, 1)
+            self.gridLayout.addWidget(processAT, i + 1, 1, 1, 1)
 
             processBT = QtWidgets.QSpinBox(self.gridLayoutWidget)
-            #processBT.setEnabled(False)
+            # processBT.setEnabled(False)
             processBT.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
-            processBT.setObjectName("processAT"+str(i+1))
+            processBT.setObjectName("processAT" + str(i + 1))
             processBT.setFixedHeight(17)
-            self.gridLayout.addWidget(processBT, i+1, 2, 1, 1)
-            
+            self.gridLayout.addWidget(processBT, i + 1, 2, 1, 1)
+
             self.I_P_AT.append(processAT)
             self.I_P_BT.append(processBT)
 
@@ -370,11 +372,11 @@ class Ui_MainWindow(object):
 
         for i in range(15):
             item = self.G_TableWidget.verticalHeaderItem(i)
-            item.setText(_translate("MainWindow", "P"+str(i+1)))
+            item.setText(_translate("MainWindow", "P" + str(i + 1)))
 
         for i in range(15):
             item = self.R_TableWidget.verticalHeaderItem(i)
-            item.setText(_translate("MainWindow", "P"+str(i+1)))
+            item.setText(_translate("MainWindow", "P" + str(i + 1)))
 
         item = self.R_TableWidget.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", "AT"))
@@ -386,7 +388,7 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "TT"))
         item = self.R_TableWidget.horizontalHeaderItem(4)
         item.setText(_translate("MainWindow", "NTT"))
-        
+
         self.I_groupBox.setTitle(_translate("MainWindow", "Input"))
         self.I_P_GroupBox.setTitle(_translate("MainWindow", "Process"))
         self.I_C_GroupBox.setTitle(_translate("MainWindow", "Core"))
@@ -396,23 +398,23 @@ class Ui_MainWindow(object):
         self.I_P_BTLabel.setText(_translate("MainWindow", "BurstTime(BT)"))
 
         for i in range(15):
-            self.I_P_Label[i].setText(_translate("MainWindow", "P"+str(i+1)))
-            #if int(i / 5) == 0: rgb = "197, 12, 246, "
-            #elif int(i / 5) == 1: rgb = "214, 18, 10, "
-            self.I_P_Label[i].setStyleSheet("border: 1px solid white; background-color: "+self.getPColor(i+1))
-        
-        for i in range(4):
-            self.I_C_C_GroupBox[i].setStyleSheet("border: 3px solid rgb"+str(self.cColor[i]))
+            self.I_P_Label[i].setText(_translate("MainWindow", "P" + str(i + 1)))
+            # if int(i / 5) == 0: rgb = "197, 12, 246, "
+            # elif int(i / 5) == 1: rgb = "214, 18, 10, "
+            self.I_P_Label[i].setStyleSheet("border: 1px solid white; background-color: " + self.getPColor(i + 1))
 
         for i in range(4):
-            self.I_C_C_GroupBox[i].setTitle(_translate("MainWindow", "Core "+str(i+1)))
+            self.I_C_C_GroupBox[i].setStyleSheet("border: 3px solid rgb" + str(self.cColor[i]))
+
+        for i in range(4):
+            self.I_C_C_GroupBox[i].setTitle(_translate("MainWindow", "Core " + str(i + 1)))
             self.I_C_PButton[i].setText(_translate("MainWindow", "P Core"))
             self.I_C_EButton[i].setText(_translate("MainWindow", "E Core"))
             self.I_C_PButton[i].setStyleSheet("border: 0px")
-            self.I_C_EButton[i].setStyleSheet("border: 0px")  
+            self.I_C_EButton[i].setStyleSheet("border: 0px")
 
-        for i in range(15): self.I_R_PCombo.addItem(str(i+1))
-        for i in range(4):  self.I_R_CCombo.addItem(str(i+1))
+        for i in range(15): self.I_R_PCombo.addItem(str(i + 1))
+        for i in range(4):  self.I_R_CCombo.addItem(str(i + 1))
 
         self.I_RR_label1.setText(_translate("MainWindow", "TimeQuantum"))
         self.I_RR_label2.setText(_translate("MainWindow", "second(s)"))
@@ -425,14 +427,27 @@ class Ui_MainWindow(object):
         self.powerConsumeSpinBox.setSuffix(_translate("MainWindow", " W"))
 
     def doStart(self):
+        scheduling = self.I_ScheduleComboBox.currentText()
+        process = self.pCount
+        core = self.cCount
+        pcore_id = []
+        at_lst = []
+        bt_lst = []
+        tq = 0
+
         for pID in range(self.pCount):
-            print(pID+1, self.I_P_AT[pID].value(), self.I_P_BT[pID].value())
+            at_lst.append(self.I_P_AT[pID].value())
+            bt_lst.append(self.I_P_BT[pID].value())
+            print(pID + 1, self.I_P_AT[pID].value(), self.I_P_BT[pID].value())
         for cID in range(self.cCount):
+            if self.I_C_PButton[cID].isChecked():
+                pcore_id.append(cID + 1)
             print(cID + 1, \
-            "P Core" if self.I_C_PButton[cID].isChecked() else "E Core")
+                  "P Core" if self.I_C_PButton[cID].isChecked() else "E Core")
 
         print(self.I_ScheduleComboBox.currentText())
         if self.I_RRTimeSpinBox.isEnabled():
+            tq = self.I_RRTimeSpinBox.value()
             print(self.I_RRTimeSpinBox.value())
 
         self.G_TableWidget.setRowCount(self.pCount)
@@ -440,15 +455,14 @@ class Ui_MainWindow(object):
 
         for i in range(self.pCount):
             item = QtWidgets.QTableWidgetItem()
-            item.setText('P'+str(i+1))
+            item.setText('P' + str(i + 1))
             self.G_TableWidget.setVerticalHeaderItem(i, item)
 
             item2 = QtWidgets.QTableWidgetItem()
-            item2.setText('P'+str(i+1))
+            item2.setText('P' + str(i + 1))
             self.R_TableWidget.setVerticalHeaderItem(i, item2)
 
-
-        #initialize
+        # initialize
         for r in range(self.G_TableWidget.rowCount()):
             for c in range(self.G_TableWidget.columnCount()):
                 item = QtWidgets.QTableWidgetItem()
@@ -467,36 +481,46 @@ class Ui_MainWindow(object):
         self.setNowTime(0)
         for i in range(4): self.setCorePowerConsume(i, 0)
         temp = []
-        for i in range(random.randrange(0,15)):
+        for i in range(random.randrange(0, 15)):
             temp.append(random.randrange(1, 16))
         self.setReadyQueue(temp)
 
+        process_lst, processor_lst, queue_lst = \
+            start_scheduling(self, scheduling, process, core, pcore_id, at_lst, bt_lst, tq)
+        print("-----------")
+        print(process_lst)  # 프로세스정보 출력
+        print("-----------")
+        print(processor_lst)  # 프로세서정보 출력
+        print("-----------")
+        print(queue_lst)  # 레디큐 정보 출력
+
     def setGTable(self, pID, time, cID):
-        #self.G_TableWidget.setItem(pID-1, time-1, QtWidgets.QTableWidgetItem(str(time) + ' ' + str(pID)))
-        r,g,b = self.cColor[cID-1]
-        self.G_TableWidget.item(pID-1, time-1).setBackground(QtGui.QColor(r,g,b))
+        # self.G_TableWidget.setItem(pID-1, time-1, QtWidgets.QTableWidgetItem(str(time) + ' ' + str(pID)))
+        r, g, b = self.cColor[cID - 1]
+        self.G_TableWidget.item(pID - 1, time - 1).setBackground(QtGui.QColor(r, g, b))
 
     def setReadyQueue(self, pList):
         pIndex = 0
         for i in range(15):
             if pIndex < len(pList):
                 self.RQ_HLayout.itemAt(i).widget().setText(str(pList[pIndex]))
-                self.RQ_HLayout.itemAt(i).widget().setStyleSheet("background-color: "+self.getPColor(pList[pIndex]))
+                self.RQ_HLayout.itemAt(i).widget().setStyleSheet("background-color: " + self.getPColor(pList[pIndex]))
                 pIndex += 1
             else:
                 self.RQ_HLayout.itemAt(i).widget().setText('')
                 self.RQ_HLayout.itemAt(i).widget().setStyleSheet("background-color: rgb(255, 255, 255);")
-        
 
     def setPowerConsume(self, power):
         self.powerConsumeSpinBox.setValue(power)
+
     def setCorePowerConsume(self, core, power):
-        self.Consume_SpinBox[core-1].setValue(power)
+        self.Consume_SpinBox[core - 1].setValue(power)
+
     def setNowTime(self, time):
         self.nowTimeSpinBox.setValue(time)
 
     def setResult(self, pID, col_code, value):
-        self.R_TableWidget.setItem(pID-1, col_code, QtWidgets.QTableWidgetItem(str(value)))
+        self.R_TableWidget.setItem(pID - 1, col_code, QtWidgets.QTableWidgetItem(str(value)))
 
     def addGTableColumn(self):
         col = self.G_TableWidget.horizontalHeader().count() + 1
@@ -504,8 +528,8 @@ class Ui_MainWindow(object):
         for r in range(self.G_TableWidget.rowCount()):
             item = QtWidgets.QTableWidgetItem()
             item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-            self.G_TableWidget.setItem(r, col-1, item)
-    
+            self.G_TableWidget.setItem(r, col - 1, item)
+
     def setPCCount(self):
         self.pCount = int(self.I_R_PCombo.currentText())
         self.cCount = int(self.I_R_CCombo.currentText())
@@ -523,10 +547,15 @@ class Ui_MainWindow(object):
         for i in range(4):
             if i < self.cCount:
                 self.I_C_C_GroupBox[i].setEnabled(True)
-            else: self.I_C_C_GroupBox[i].setEnabled(False)
+            else:
+                self.I_C_C_GroupBox[i].setEnabled(False)
 
     def getPColor(self, p):
-        return "rgba(235, 113, 34, "+str(255-p*16)+')'
+        return "rgba(235, 113, 34, " + str(255 - p * 16) + ')'
+
+    def sleep(self):
+        QTest.qWait(250)
+
 
 def suppress_qt_warnings():
     environ["QT_DEVICE_PIXEL_RATIO"] = "0"
@@ -534,12 +563,14 @@ def suppress_qt_warnings():
     environ["QT_SCREEN_SCALE_FACTORS"] = "1"
     environ["QT_SCALE_FACTOR"] = "1"
 
+
 if __name__ == "__main__":
     import sys
+
     suppress_qt_warnings()
 
     app = QtWidgets.QApplication(sys.argv)
-    #app.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+    # app.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)

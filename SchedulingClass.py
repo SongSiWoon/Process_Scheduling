@@ -1,3 +1,7 @@
+from time import sleep
+from decimal import Decimal
+
+
 class ReadyQueue:
     # 생성자
     def __init__(self):
@@ -84,13 +88,13 @@ class HRRNReadyQueue(ReadyQueue):
     def __init__(self):
         super(HRRNReadyQueue, self).__init__()
 
-    def enqueue(self, item):
-        self.items.append(item)
-        self.items.sort(key=lambda process: process.get_response_ratio(), reverse=True)
+    # def enqueue(self, item):
+    #     self.items.append(item)
+    #     self.items.sort(key=lambda process: process.get_response_ratio(), reverse=True)
 
-    # def dequeue(self):
-    #     priority = self.items.index(max(self.items, key=lambda process: process.get_response_ratio()))
-    #     return self.items.pop(priority)
+    def dequeue(self):
+        priority = self.items.index(max(self.items, key=lambda process: process.get_response_ratio()))
+        return self.items.pop(priority)
 
 
 class Process:
@@ -110,7 +114,6 @@ class Process:
     def update_processinfo(self, time):
         self.tt = time - self.at
         self.ntt = round(self.tt / self.bt, 2)
-        self.wt = self.tt - self.bt
 
     # HRRN을 위한 Response ratio 계산
     def get_response_ratio(self):
@@ -131,6 +134,7 @@ class Processor:
         self.running = False  # 프로세서 상태
         self.power_consum = 0  # 소비 전력
         self.power_waiting = 0  # 대기 전력
+        self.power = 0
         self.memory = []  # 프로세스 기록
 
     # 프로세스 할당
@@ -144,10 +148,11 @@ class Processor:
     def Ecore_running(self, time, gui):
         if self.process is not None:
             self.memory.append(self.process.id)
-            gui.setGTable(self.process.id, time)
+            gui.setGTable(self.process.id, time, self.id)
             if self.running:
                 self.process.cbt -= 1
                 self.power_consum += 1  # Ecore의 소비전력 계산
+                self.power += 1
                 if self.process.cbt == 0:
                     self.running = False
                     self.process.update_processinfo(time)  # 프로스세가 종료되면 tt, ntt, wt 업데이트
@@ -155,17 +160,20 @@ class Processor:
                     return 1
         else:
             self.memory.append(None)
-            self.power_waiting += 0.1  # Ecore의 대기전력 계산
+            self.power_waiting += float(Decimal('0.1'))
+            self.power += float(Decimal('0.1'))
+
         return 0
 
     # Pcore 프로세스 실행 -> 프로세스 cbr를 2감소, 소비 전력 3증가, 대기전력 0.1증가
     def Pcore_running(self, time, gui):
         if self.process is not None:
             self.memory.append(self.process.id)
-            gui.setGTable(self.process.id, time)
+            gui.setGTable(self.process.id, time, self.id)
             if self.running:
                 self.process.cbt -= 2  # Ecore대비 2배의 성능
                 self.power_consum += 3  # Ecore대비 소비전력 3배 계산
+                self.power += 3
                 if self.process.cbt <= 0:
                     self.running = False
                     self.process.update_processinfo(time)  # 프로스세가 종료되면 tt, ntt, wt 업데이트
@@ -173,7 +181,8 @@ class Processor:
                     return 1
         else:
             self.memory.append(None)
-            self.power_waiting += 0.1
+            self.power_waiting += float(Decimal('0.1'))
+            self.power += float(Decimal('0.1'))
         return 0
 
     # time-quantum 확인
@@ -200,6 +209,7 @@ class Scheduling:
         self.bt_lst = bt_lst  # 입력받은 실행시간 리스트
         self.at_lst = at_lst  # 입력받은 도착시간 리스트
         self.tq = tq  # 입력받은 time-quantum
+        self.power = 0  # 모든 코어 총 전력
 
         self.init_process()
         self.init_processor()
@@ -212,7 +222,7 @@ class Scheduling:
     # 입력받은 정보들로 프로세서 객체 생성
     def init_processor(self):
         for i in range(self.processor_n):
-            if str(i + 1) in self.pcore_index:
+            if i + 1 in self.pcore_index:
                 self.processor_lst.append(Processor(i + 1, "p"))
             else:
                 self.processor_lst.append(Processor(i + 1))
@@ -225,14 +235,25 @@ class Scheduling:
         # 종료된 프로세스의 수와 입력된 프로세스의 수가 같을때 까지 실행
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)  # 새롭게 들어오는 프로세스 readyqueue에 추가
-            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
             time += 1
+            self.gui.setNowTime(time)
+            total_power = 0
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)  # 현재 비어있는 프로세서에 프로세스 할당
                 if processor.core == "e":
                     termination += processor.Ecore_running(time, self.gui)
                 else:
                     termination += processor.Pcore_running(time, self.gui)
+                self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
+                total_power += processor.power
+            for process in self.readyQueue.items:
+                process.wt += 1
+            self.gui.setPowerConsume(round(total_power, 2))
+
+            self.gui.sleep()
 
         process_info = self.output_process_info()  # 프로세스 정보들 반환
         processor_info = self.output_processor_info()  # 프로세서 정보들 반환
@@ -243,6 +264,11 @@ class Scheduling:
     def output_process_info(self):
         process_info = []
         for process in self.process_lst:
+            self.gui.setResult(process.id, 0, process.at)
+            self.gui.setResult(process.id, 1, process.bt)
+            self.gui.setResult(process.id, 2, process.wt)
+            self.gui.setResult(process.id, 3, process.tt)
+            self.gui.setResult(process.id, 4, process.ntt)
             process_info.append((process.id, process.at, process.bt, process.wt, process.tt, process.ntt))
 
         return process_info
@@ -252,9 +278,10 @@ class Scheduling:
         processor_info = []
 
         for processor in self.processor_lst:
-            power = processor.power_consum + processor.power_waiting
-            processor_info.append((processor.id, processor.core, power, processor.memory))
+            self.power += processor.power
+            processor_info.append((processor.id, processor.core, round(processor.power, 2), processor.memory))
 
+        processor_info.append(self.power)
         return processor_info
 
     # readyqueue에 들어왔던 프로세스 id 반환
@@ -284,15 +311,26 @@ class RR(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
             time += 1
+            self.gui.setNowTime(time)
+            total_power = 0
             for processor in self.processor_lst:
-                processor.check_time_quantum(self.readyQueue)  # RR은 time-quantum확인하는 로직 추가
+                processor.check_time_quantum(self.readyQueue)  # RR은 time-quantum 확인하는 로직 추가
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
                     termination += processor.Ecore_running(time, self.gui)
                 else:
                     termination += processor.Pcore_running(time, self.gui)
+                self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
+                total_power += processor.power
+            for process in self.readyQueue.items:
+                process.wt += 1
+            self.gui.setPowerConsume(round(total_power, 2))
+
+            self.gui.sleep()
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
@@ -317,14 +355,20 @@ class SRTN(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
             time += 1
+            self.gui.setNowTime(time)
+            total_power = 0
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
                     termination += processor.Ecore_running(time, self.gui)
                 else:
                     termination += processor.Pcore_running(time, self.gui)
+                self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
+                total_power += processor.power
 
                 if processor.running and processor.process is not None and not self.readyQueue.isEmpty():
                     # 현재 실행중인 프로세스의 남은 실행시간과 readyQueue에서 남은 실행시간이 가장 적은 값과 비교
@@ -332,6 +376,12 @@ class SRTN(Scheduling):
                         processor.running = False
                         self.readyQueue.enqueue(processor.process)
                         processor.process = None
+
+            for process in self.readyQueue.items:
+                process.wt += 1
+            self.gui.setPowerConsume(round(total_power, 2))
+
+            self.gui.sleep()
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
@@ -350,17 +400,28 @@ class HRRN(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
             time += 1
+            self.gui.setNowTime(time)
+            total_power = 0
+
             for processor in self.processor_lst:
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
                     termination += processor.Ecore_running(time, self.gui)
                 else:
                     termination += processor.Pcore_running(time, self.gui)
-            # response_ratio계산을 위해 readyQueue에 있는 프로세스들의 wt 업데이트
+                self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
+                total_power += processor.power
+
             for process in self.readyQueue.items:
                 process.wt += 1
+
+            self.gui.setPowerConsume(round(total_power, 2))
+
+            self.gui.sleep()
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
@@ -370,6 +431,7 @@ class HRRN(Scheduling):
 
 class P_HRRN(Scheduling):
     def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq):
+        print("WTF")
         super(P_HRRN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
         self.readyQueue = HRRNReadyQueue()  # HRRN전용 Queue 사용
 
@@ -379,20 +441,32 @@ class P_HRRN(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
             time += 1
+            self.gui.setNowTime(time)
+            total_power = 0
+
             for processor in self.processor_lst:
                 processor.check_time_quantum(self.readyQueue)  # time-quantum확인하는 로직 추가
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
-                    termination += processor.Ecore_running(time)
+                    termination += processor.Ecore_running(time, self.gui)
                 else:
-                    termination += processor.Pcore_running(time)
-            # response_ratio계산을 위해 readyQueue에 있는 프로세스들의 wt 업데이트
+                    termination += processor.Pcore_running(time, self.gui)
+                self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
+                total_power += processor.power
+
             for process in self.readyQueue.items:
                 process.wt += 1
+
+            self.gui.setPowerConsume(round(total_power, 2))
+
+            self.gui.sleep()
 
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
         queue_info = self.queue_memory
+
         return process_info, processor_info, queue_info

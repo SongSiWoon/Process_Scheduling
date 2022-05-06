@@ -29,6 +29,11 @@ def start_scheduling(gui, scheduling, processes, processors, pcore_idx, arrival_
         process_lst, processor_lst, queue_lst = HRRN(gui, processes, processors, pcore_idx, arrival_time_lst,
                                                      burst_time_lst) \
             .multi_processing()
+    else:
+        process_lst, processor_lst, queue_lst = P_HRRN(gui, processes, processors, pcore_idx,
+                                                                          arrival_time_lst, burst_time_lst, time_quantum) \
+            .multi_processing()
+
     return process_lst, processor_lst, queue_lst
 
 
