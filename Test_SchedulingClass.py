@@ -231,9 +231,8 @@ class Scheduling:
         termination = 0  # 종료된 프로세스의 수
 
         # 종료된 프로세스의 수와 입력된 프로세스의 수가 같을때 까지 실행
-        while termination != self.process_n:
+        while termination != self.process_n or not self.readyQueue.isEmpty:
             self.readyQueue.inready(self.process_lst, time)  # 새롭게 들어오는 프로세스 readyqueue에 추가
-            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
             time += 1
             total_power = 0
             for processor in self.processor_lst:
@@ -244,6 +243,7 @@ class Scheduling:
                     termination += processor.Pcore_running(time)
                 print(processor.id, processor.power)
                 total_power += processor.power
+            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
 
         process_info = self.output_process_info()  # 프로세스 정보들 반환
         processor_info = self.output_processor_info()  # 프로세서 정보들 반환
@@ -295,18 +295,17 @@ class RR(Scheduling):
         time = 0
         termination = 0
 
-        while termination != self.process_n:
+        while termination != self.process_n or not self.readyQueue.isEmpty():
             self.readyQueue.inready(self.process_lst, time)
-            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
             time += 1
             for processor in self.processor_lst:
-                processor.check_time_quantum(self.readyQueue)  # RR은 time-quantum확인하는 로직 추가
+                processor.check_time_quantum(self.readyQueue)  # RR은 time-quantum 확인하는 로직 추가
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
                     termination += processor.Ecore_running(time)
                 else:
                     termination += processor.Pcore_running(time)
-
+            self.queue_memory.append(self.output_ReadyQueue_info(self.readyQueue))
         process_info = self.output_process_info()
         processor_info = self.output_processor_info()
         queue_info = self.queue_memory

@@ -1,4 +1,3 @@
-from time import sleep
 from decimal import Decimal
 
 
@@ -45,15 +44,6 @@ class SPNReadyQueue(ReadyQueue):
         self.items.append(item)
         self.items.sort(key=lambda process: process.bt)
 
-    # # 실행시간이 적은 프로세스에게 우선순위르 부여하는 dequeue 재정의
-    # def dequeue(self):
-    #     if not self.isEmpty():
-    #         priority = 0
-    #         for i in range(1, self.size()):
-    #             if self.items[i].bt < self.items[priority].bt:
-    #                 priority = i
-    #         return self.items.pop(priority)
-
 
 # SRTN전용 readyQueue
 class SRTNReadyQueue(ReadyQueue):
@@ -64,33 +54,11 @@ class SRTNReadyQueue(ReadyQueue):
         self.items.append(item)
         self.items.sort(key=lambda process: process.cbt)
 
-    # # 잔여 실행시간이 적은 프로세스에게 우선순위를 부여하는 dequeue 재정의
-    # def dequeue(self):
-    #     if not self.isEmpty():
-    #         priority = 0
-    #         for i in range(1, self.size()):
-    #             if self.items[i].cbt < self.items[priority].cbt:
-    #                 priority = i
-    #         return self.items.pop(priority)
-    #
-    # # 현재 running 상태는 프로세스 잔여시간과 ready 프로세스의 잔여시간 비교를 위한 peek 재정의
-    # def peek(self):
-    #     if not self.isEmpty():
-    #         priority = 0
-    #         for i in range(1, self.size()):
-    #             if self.items[i].cbt < self.items[priority].cbt:
-    #                 priority = i
-    #         return self.items[priority]
-
 
 # HRRN전용 readyQueue
 class HRRNReadyQueue(ReadyQueue):
     def __init__(self):
         super(HRRNReadyQueue, self).__init__()
-
-    # def enqueue(self, item):
-    #     self.items.append(item)
-    #     self.items.sort(key=lambda process: process.get_response_ratio(), reverse=True)
 
     def dequeue(self):
         priority = self.items.index(max(self.items, key=lambda process: process.get_response_ratio()))
@@ -192,7 +160,7 @@ class Processor:
             if self.process.ctq == 0:  # time-quantum이 0일때 다름 프로세스한테 선점당함
                 self.running = False
                 readyQueue.enqueue(self.process)
-                self.process.ctq = self.process.tq  # 다시 ctq time-quantum을 초기화
+                self.process.ctq = self.process.tq  # 다시 ctq time-quantum 을 초기화
                 self.process = None
 
 
@@ -235,9 +203,6 @@ class Scheduling:
         # 종료된 프로세스의 수와 입력된 프로세스의 수가 같을때 까지 실행
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)  # 새롭게 들어오는 프로세스 readyqueue에 추가
-            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
-            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
-            self.gui.setReadyQueue(out_ready_queue)
             time += 1
             self.gui.setNowTime(time)
             total_power = 0
@@ -249,6 +214,11 @@ class Scheduling:
                     termination += processor.Pcore_running(time, self.gui)
                 self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
                 total_power += processor.power
+
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
+
             for process in self.readyQueue.items:
                 process.wt += 1
             self.gui.setPowerConsume(round(total_power, 2))
@@ -311,9 +281,6 @@ class RR(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
-            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
-            self.gui.setReadyQueue(out_ready_queue)
             time += 1
             self.gui.setNowTime(time)
             total_power = 0
@@ -326,6 +293,11 @@ class RR(Scheduling):
                     termination += processor.Pcore_running(time, self.gui)
                 self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
                 total_power += processor.power
+
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
+
             for process in self.readyQueue.items:
                 process.wt += 1
             self.gui.setPowerConsume(round(total_power, 2))
@@ -355,9 +327,7 @@ class SRTN(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
-            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
-            self.gui.setReadyQueue(out_ready_queue)
+
             time += 1
             self.gui.setNowTime(time)
             total_power = 0
@@ -376,6 +346,10 @@ class SRTN(Scheduling):
                         processor.running = False
                         self.readyQueue.enqueue(processor.process)
                         processor.process = None
+
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
 
             for process in self.readyQueue.items:
                 process.wt += 1
@@ -400,9 +374,7 @@ class HRRN(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
-            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
-            self.gui.setReadyQueue(out_ready_queue)
+
             time += 1
             self.gui.setNowTime(time)
             total_power = 0
@@ -415,6 +387,10 @@ class HRRN(Scheduling):
                     termination += processor.Pcore_running(time, self.gui)
                 self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
                 total_power += processor.power
+
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
 
             for process in self.readyQueue.items:
                 process.wt += 1
@@ -431,7 +407,6 @@ class HRRN(Scheduling):
 
 class P_HRRN(Scheduling):
     def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq):
-        print("WTF")
         super(P_HRRN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
         self.readyQueue = HRRNReadyQueue()  # HRRN전용 Queue 사용
 
@@ -441,15 +416,13 @@ class P_HRRN(Scheduling):
 
         while termination != self.process_n:
             self.readyQueue.inready(self.process_lst, time)
-            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
-            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
-            self.gui.setReadyQueue(out_ready_queue)
+
             time += 1
             self.gui.setNowTime(time)
             total_power = 0
 
             for processor in self.processor_lst:
-                processor.check_time_quantum(self.readyQueue)  # time-quantum확인하는 로직 추가
+                processor.check_time_quantum(self.readyQueue)  # time-quantum 확인하는 로직 추가
                 processor.dispatch(self.readyQueue)
                 if processor.core == "e":
                     termination += processor.Ecore_running(time, self.gui)
@@ -457,6 +430,10 @@ class P_HRRN(Scheduling):
                     termination += processor.Pcore_running(time, self.gui)
                 self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
                 total_power += processor.power
+
+            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
+            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
+            self.gui.setReadyQueue(out_ready_queue)
 
             for process in self.readyQueue.items:
                 process.wt += 1

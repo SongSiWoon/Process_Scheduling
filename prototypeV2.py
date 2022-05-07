@@ -152,7 +152,7 @@ class Ui_MainWindow(object):
         self.Consume_SpinBox = []
         for i in range(4):
             spinBox = QtWidgets.QDoubleSpinBox(self.Consume_Group)
-            spinBox.setGeometry(QtCore.QRect(10 + 60 * int(i % 2), 20 + 39 * int(i / 2), 51, 21))
+            spinBox.setGeometry(QtCore.QRect(10 + 55 * int(i % 2), 20 + 30 * int(i / 2), 56, 31))
             spinBox.setFrame(True)
             spinBox.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
             spinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
@@ -160,6 +160,8 @@ class Ui_MainWindow(object):
             spinBox.setReadOnly(True)
             spinBox.setSuffix(' W')
             spinBox.setStyleSheet("border: 1px solid rgb" + str(self.cColor[i]))
+            spinBox.setMaximum(1000)
+            spinBox.setDecimals(1)
             self.Consume_SpinBox.append(spinBox)
 
         self.RQ_GroupBox = QtWidgets.QGroupBox(self.centralwidget)
@@ -252,12 +254,13 @@ class Ui_MainWindow(object):
                 self.G_TableWidget.setItem(r, c, item)
 
         self.G_TableWidget.horizontalHeader().setCascadingSectionResizes(False)
-        # self.G_TableWidget.horizontalHeader().setMinimumSectionSize(3)
         self.G_TableWidget.horizontalHeader().setMaximumSectionSize(23)
+        self.G_TableWidget.horizontalHeader().setMinimumSectionSize(23)
         self.G_TableWidget.horizontalHeader().setDefaultSectionSize(23)
-        # self.G_TableWidget.verticalHeader().setMinimumSectionSize(3)
+        #self.G_TableWidget.verticalHeader().setMinimumSectionSize(20)
         self.G_TableWidget.verticalHeader().setMaximumSectionSize(20)
         self.G_TableWidget.verticalHeader().setDefaultSectionSize(20)
+        self.G_TableWidget.verticalHeader().setFixedWidth(29)
 
         self.R_GroupBox = QtWidgets.QGroupBox(self.centralwidget)
         self.R_GroupBox.setGeometry(QtCore.QRect(550, 10, 451, 321))
@@ -289,6 +292,7 @@ class Ui_MainWindow(object):
 
         self.R_TableWidget.horizontalHeader().setCascadingSectionResizes(False)
         self.R_TableWidget.horizontalHeader().setMaximumSectionSize(80)
+        self.R_TableWidget.horizontalHeader().setMinimumSectionSize(80)
         self.R_TableWidget.horizontalHeader().setDefaultSectionSize(80)
         self.R_TableWidget.verticalHeader().setMaximumSectionSize(18)
         self.R_TableWidget.verticalHeader().setDefaultSectionSize(18)
@@ -301,6 +305,7 @@ class Ui_MainWindow(object):
         self.powerConsumeSpinBox.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.powerConsumeSpinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
         self.powerConsumeSpinBox.setMaximum(10000)
+        self.powerConsumeSpinBox.setDecimals(1)
         self.powerConsumeSpinBox.setObjectName("powerConsumeSpinBox")
 
         self.nowTimeSpinBox = QtWidgets.QSpinBox(self.G_GroupBox)
@@ -415,6 +420,8 @@ class Ui_MainWindow(object):
 
         for i in range(15): self.I_R_PCombo.addItem(str(i + 1))
         for i in range(4):  self.I_R_CCombo.addItem(str(i + 1))
+        self.I_R_PCombo.setCurrentIndex(14)
+        self.I_R_CCombo.setCurrentIndex(3)
 
         self.I_RR_label1.setText(_translate("MainWindow", "TimeQuantum"))
         self.I_RR_label2.setText(_translate("MainWindow", "second(s)"))
@@ -444,6 +451,10 @@ class Ui_MainWindow(object):
                 pcore_id.append(cID + 1)
             print(cID + 1, \
                   "P Core" if self.I_C_PButton[cID].isChecked() else "E Core")
+
+        if 0 in bt_lst:
+            QtWidgets.QMessageBox.critical(self.main,'Error','잘못된 BT 값이 있습니다.')
+            return
 
         print(self.I_ScheduleComboBox.currentText())
         if self.I_RRTimeSpinBox.isEnabled():
@@ -496,6 +507,9 @@ class Ui_MainWindow(object):
 
     def setGTable(self, pID, time, cID):
         # self.G_TableWidget.setItem(pID-1, time-1, QtWidgets.QTableWidgetItem(str(time) + ' ' + str(pID)))
+        if time > self.G_TableWidget.columnCount():
+            for i in range(time - self.G_TableWidget.columnCount()):
+                self.addGTableColumn()
         r, g, b = self.cColor[cID - 1]
         self.G_TableWidget.item(pID - 1, time - 1).setBackground(QtGui.QColor(r, g, b))
 
