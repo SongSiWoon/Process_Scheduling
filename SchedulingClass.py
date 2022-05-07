@@ -386,45 +386,10 @@ class SRTN(Scheduling):
 
 
 class HRRN(Scheduling):
+    # Scheduling 상속받아 SRTN 구현
     def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst):
         super(HRRN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst)
         self.readyQueue = HRRNReadyQueue()  # HRRN전용 Queue 사용
-
-    def multi_processing(self):
-        time = 0
-        termination = 0
-
-        while termination != self.process_n:
-            self.readyQueue.inready(self.process_lst, time)
-
-            time += 1
-            self.gui.setNowTime(time)
-            total_power = 0
-
-            for processor in self.processor_lst:
-                processor.dispatch(self.readyQueue)
-                if processor.core == "e":
-                    termination += processor.Ecore_running(time, self.gui)
-                else:
-                    termination += processor.Pcore_running(time, self.gui)
-                self.gui.setCorePowerConsume(processor.id, round(processor.power, 2))
-                total_power += processor.power
-
-            out_ready_queue = self.output_ReadyQueue_info(self.readyQueue)
-            self.queue_memory.append(out_ready_queue)  # 현재 레디큐에 있는 프로세스를 반환하기위해 저장
-            self.gui.setReadyQueue(out_ready_queue)
-
-            for process in self.readyQueue.items:
-                process.wt += 1
-
-            self.gui.setPowerConsume(round(total_power, 2))
-
-            self.gui.sleep()
-
-        process_info = self.output_process_info()
-        processor_info = self.output_processor_info()
-        queue_info = self.queue_memory
-        return process_info, processor_info, queue_info
 
 
 class P_HRRN(Scheduling):
@@ -432,6 +397,7 @@ class P_HRRN(Scheduling):
         super(P_HRRN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst, tq)
         self.readyQueue = HRRNReadyQueue()  # HRRN전용 Queue 사용
 
+    # P_HRRN multi_processing 재정의
     def multi_processing(self):
         time = 0
         termination = 0
