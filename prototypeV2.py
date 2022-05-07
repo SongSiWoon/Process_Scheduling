@@ -491,10 +491,7 @@ class Ui_MainWindow(object):
         self.setPowerConsume(0)
         self.setNowTime(0)
         for i in range(4): self.setCorePowerConsume(i, 0)
-        temp = []
-        for i in range(random.randrange(0, 15)):
-            temp.append(random.randrange(1, 16))
-        self.setReadyQueue(temp)
+        self.G_TableWidget.setColumnCount(40)
 
         process_lst, processor_lst, queue_lst = \
             start_scheduling(self, scheduling, process, core, pcore_id, at_lst, bt_lst, tq)
