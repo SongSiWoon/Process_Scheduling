@@ -386,7 +386,7 @@ class SRTN(Scheduling):
 
 
 class HRRN(Scheduling):
-    # Scheduling 상속받아 SRTN 구현
+    # Scheduling 상속받아 HRRN 구현
     def __init__(self, gui, process_n, processor_n, p_core_lst, at_lst, bt_lst):
         super(HRRN, self).__init__(gui, process_n, processor_n, p_core_lst, at_lst, bt_lst)
         self.readyQueue = HRRNReadyQueue()  # HRRN전용 Queue 사용
